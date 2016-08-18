@@ -21,7 +21,6 @@ define([
         '../Core/RequestScheduler',
         '../Core/SphereOutlineGeometry',
         '../ThirdParty/Uri',
-        '../ThirdParty/when',
         './Cesium3DTileContentFactory',
         './Cesium3DTileContentState',
         './Cesium3DTileRefine',
@@ -54,7 +53,6 @@ define([
         RequestScheduler,
         SphereOutlineGeometry,
         Uri,
-        when,
         Cesium3DTileContentFactory,
         Cesium3DTileContentState,
         Cesium3DTileRefine,
@@ -204,7 +202,9 @@ define([
 
         this._createContent = createContent;
         this._content = createContent();
-        addContentReadyPromise(this);
+        if (!hasContent && !hasTilesetContent) {
+            addContentReadyPromise(this);
+        }
 
         this._requestServer = requestServer;
 
@@ -269,6 +269,13 @@ define([
          * @private
          */
         this.selected = false;
+
+        /**
+         * Marks if the tile is replaced this frame.
+         *
+         * @type {Boolean}
+         */
+        this.replaced = false;
 
         /**
          * The last frame number the tile was selected in.
@@ -383,7 +390,7 @@ define([
 
     function addContentReadyPromise(tile) {
         // Content enters the READY state
-        when(tile._content.readyPromise).then(function(content) {
+        tile._content.readyPromise.then(function(content) {
             if (defined(tile.parent)) {
                 --tile.parent.numberOfChildrenWithoutContent;
             }
@@ -403,7 +410,9 @@ define([
      * @private
      */
     Cesium3DTile.prototype.requestContent = function() {
-        this._content.request();
+        if (this._content.request()) {
+            addContentReadyPromise(this);
+        }
     };
 
     /**
@@ -435,7 +444,9 @@ define([
 
         this._content = this._content && this._content.destroy();
         this._content = this._createContent();
-        addContentReadyPromise(this);
+        if (!this.hasContent && !this.hasTilesetContent) {
+            addContentReadyPromise(this);
+        }
 
         this.replacementNode = undefined;
 
